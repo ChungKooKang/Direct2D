@@ -1,6 +1,6 @@
 #include <windows.h>
 #include <d2d1.h> //direct 2D 1버젼 Window7 버젼
-
+#include <cmath>
 
 #pragma comment (lib, "d2d1.lib")
 
@@ -16,6 +16,7 @@
 const wchar_t gClassName[]{ L"MyWindowClass" };
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+void OnPaint(HWND hwnd);
 
 
 // 0. D2D 전역 변수들
@@ -146,11 +147,32 @@ int WINAPI WinMain(
 	ShowWindow(hwnd, nShowCmd);
 	UpdateWindow(hwnd);
 
+	//MSG msg;
+	//while(GetMessage(&msg, NULL, 0, 0))
+	//{
+	//	TranslateMessage(&msg);
+	//	DispatchMessage(&msg);
+
+	//	OnPaint(hwnd);
+	//}
+
 	MSG msg;
-	while(GetMessage(&msg, NULL, 0, 0))
+	while (true)
 	{
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
+		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		{
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+			if (msg.message == WM_QUIT)
+			{
+				break;
+			}
+
+		}
+		else
+		{
+			OnPaint(hwnd);
+		}
 	}
 
 	// 4. 해제 (생성의 역순으로)
@@ -201,14 +223,14 @@ void OnPaint(HWND hwnd)
 		D2D1::RectF(50.0f, 50.0f, 150.0f, 150.0f),
 		gpBrush
 	);
+	static float angle = 0.0f;
 
 	gpRenderTargetP->FillEllipse(
-		D2D1::Ellipse(D2D1::Point2F(50.0f, 150.0f), 50.0f, 50.0f),
+		D2D1::Ellipse(D2D1::Point2F(75.0f + sinf(angle) * 25.0f, 150.0f), 50.0f, 50.0f),
 		gpRadialBrush
 	);
 
-
-
+	angle+=0.1f;
 
 	gpRenderTargetP->EndDraw();
 
