@@ -3,6 +3,7 @@
 
 #pragma comment (lib, "d2d1.lib")
 
+
 HRESULT D2DFramework::InitWindow(HINSTANCE hInstance, LPCWSTR title, UINT width, UINT height)
 {
 	WNDCLASSEX wc;
@@ -44,6 +45,9 @@ HRESULT D2DFramework::InitWindow(HINSTANCE hInstance, LPCWSTR title, UINT width,
 		return 0;
 	}
 	mHwnd = hwnd;
+
+	SetWindowLongPtr(mHwnd, GWLP_USERDATA, 
+		reinterpret_cast<LONG_PTR>(this));
 
 	return S_OK;
 }
@@ -87,6 +91,7 @@ void D2DFramework::Initialize(HINSTANCE hInstance, LPCWSTR title, UINT width, UI
 {
 	InitWindow(hInstance, title, width, height);
 	InitD2D(mHwnd);
+
 
 	ShowWindow(mHwnd, SW_SHOW);
 	UpdateWindow(mHwnd);
@@ -143,6 +148,8 @@ void D2DFramework::ShowErrorMsg(LPCWSTR msg, HRESULT error, LPCWSTR title)
 
 LRESULT CALLBACK D2DFramework::WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+	D2DFramework* pFramework = reinterpret_cast<D2DFramework*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+
 	switch (message)
 	{
 	case WM_CLOSE:
