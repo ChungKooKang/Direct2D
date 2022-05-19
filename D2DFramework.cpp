@@ -3,7 +3,52 @@
 
 #pragma comment (lib, "d2d1.lib")
 
-HRESULT D2DFramework::Init(HWND hwnd)
+HRESULT D2DFramework::InitWindow(HINSTANCE hInstance, LPCWSTR title, UINT width, UINT height)
+{
+	WNDCLASSEX wc;
+
+	ZeroMemory(&wc, sizeof(WNDCLASSEX));
+	wc.style = CS_HREDRAW | CS_VREDRAW;
+	wc.lpszClassName = WINDOW_CLASSNAME;
+	wc.hInstance = hInstance;
+	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+	wc.hbrBackground = (HBRUSH)COLOR_WINDOW;
+	wc.lpfnWndProc = WindowProc;
+	wc.cbSize = sizeof(WNDCLASSEX);
+	if (!RegisterClassEx(&wc))
+	{
+		MessageBox(NULL, L"Failed To Register!", L"Error", MB_OK);
+		return 0;
+	}
+
+
+	RECT rc{ 0, 0, static_cast<LONG>(width), static_cast<LONG>(height) };
+	AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
+
+	HWND hwnd = CreateWindowEx(
+		NULL,
+		WINDOW_CLASSNAME,
+		title,
+		WS_OVERLAPPEDWINDOW,
+		CW_USEDEFAULT, CW_USEDEFAULT,
+		rc.right - rc.left,
+		rc.bottom - rc.top,
+		NULL,
+		NULL,
+		hInstance,
+		NULL
+	);
+	if (hwnd == NULL)
+	{
+		MessageBox(NULL, L"Failed To Create", L"Error", MB_OK);
+		return 0;
+	}
+	mHwnd = hwnd;
+
+	return S_OK;
+}
+
+HRESULT D2DFramework::InitD2D(HWND hwnd)
 {
 	// 1. D2D Factory 만들기
 
@@ -15,11 +60,9 @@ HRESULT D2DFramework::Init(HWND hwnd)
 
 	// SUCCEEDED(hr) 많은 성공들을 확인할 수있는 것.
 
-	if (FAILED(hr)) // FAIED는 < 0 라는 뜻이다. 많은 error들을 확인할 수 있는 것.
-	{
-		ShowErrorMsg(L"Failed To Creat D2D Factory!");
-		return hr;
-	}
+
+
+	ThrowIfFailed(hr);
 
 	// 2. RenderTarget 생성
 	RECT rc;
@@ -33,13 +76,21 @@ HRESULT D2DFramework::Init(HWND hwnd)
 		),
 		mspRenderTarget.GetAddressOf()
 	);
-	if (FAILED(hr))
-	{
-		ShowErrorMsg(L"Failed To Create D2D Render Target!");
-		return hr;
-	}
 
-    return S_OK;
+	ThrowIfFailed(hr);
+
+    return S_OK;		
+}
+
+
+void D2DFramework::Initialize(HINSTANCE hInstance, LPCWSTR title, UINT width, UINT height)
+{
+	InitWindow(hInstance, title, width, height);
+	InitD2D(mHwnd);
+
+	ShowWindow(mHwnd, SW_SHOW);
+	UpdateWindow(mHwnd);
+
 }
 
 void D2DFramework::Release()
@@ -55,6 +106,31 @@ void D2DFramework::Render()
 	mspRenderTarget->EndDraw();
 }
 
+int D2DFramework::GameLoop()
+{
+	MSG msg;
+	while (true)
+	{
+		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		{
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+			if (msg.message == WM_QUIT)
+			{
+				break;
+			}
+		}
+		else
+		{
+			Render();
+		}
+	}
+
+	Release();
+
+	return static_cast<int>(msg.wParam);
+}
+
 void D2DFramework::ShowErrorMsg(LPCWSTR msg, HRESULT error, LPCWSTR title)
 {
 	std::wostringstream oss;
@@ -63,4 +139,23 @@ void D2DFramework::ShowErrorMsg(LPCWSTR msg, HRESULT error, LPCWSTR title)
 	oss << msg;
 	
 	OutputDebugString(oss.str().c_str());
+}
+
+LRESULT CALLBACK D2DFramework::WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	switch (message)
+	{
+	case WM_CLOSE:
+		DestroyWindow(hwnd);
+		break;
+
+	case WM_DESTROY:
+		PostQuitMessage(0);
+		break;
+
+	default:
+		return DefWindowProc(hwnd, message, wParam, lParam);
+	}
+
+	return 0;
 }
